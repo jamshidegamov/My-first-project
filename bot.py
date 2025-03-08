@@ -68,8 +68,27 @@ async def send_daily_quote(context: ContextTypes.DEFAULT_TYPE):
 
 async def start_daily_quotes(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.message.chat.id
-    context.job_queue.run_daily(send_daily_quote, time=datetime.time(hour=9, minute=0, second=0), chat_id=chat_id)
-    await update.message.reply_text("✅ You will receive daily motivational quotes at 9 AM!")
+    job_removed = remove_job_if_exists(str(chat_id), context)
+    context.job_queue.run_daily(send_daily_quote, time=datetime.time(hour=9, minute=0, second=0), chat_id=chat_id, name=str(chat_id))
+    text = "✅ You will receive daily motivational quotes at 9 AM!"
+    if job_removed:
+        text += " (Previous subscription removed)"
+    await update.message.reply_text(text)
+
+async def stop_daily_quotes(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.message.chat.id
+    job_removed = remove_job_if_exists(str(chat_id), context)
+    text = "❌ You have unsubscribed from daily quotes." if job_removed else "You were not subscribed to daily quotes."
+    await update.message.reply_text(text)
+
+# ✅ Function to remove existing job
+def remove_job_if_exists(name: str, context: ContextTypes.DEFAULT_TYPE) -> bool:
+    current_jobs = context.job_queue.get_jobs_by_name(name)
+    if not current_jobs:
+        return False
+    for job in current_jobs:
+        job.schedule_removal()
+    return True
 
 # ✅ Handling messages
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -84,10 +103,13 @@ async def error(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ✅ Main function to run the bot
 def main():
     app = Application.builder().token(TOKEN).build()
+    job_queue = app.job_queue  # Ensure job queue is initialized
+    job_queue.start()  # ✅ Explicitly start job queue
     
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("dailyquote", start_daily_quotes))
+    app.add_handler(CommandHandler("stopdailyquote", stop_daily_quotes))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     app.add_error_handler(error)
     
@@ -97,3 +119,4 @@ def main():
 # ✅ Run bot
 if __name__ == "__main__":
     main()
+
