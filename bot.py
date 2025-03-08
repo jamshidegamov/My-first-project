@@ -77,5 +77,5 @@ def main():
 
 
 # ✅ Run bot
-if name == "main":
+if __name__ == "__main__":
     main()
