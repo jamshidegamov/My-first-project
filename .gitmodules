@@ -1,0 +1,3 @@
+[submodule "My-first-project"]
+    path = My-first-project
+    url = https://github.com/jamshidegamov/My-first-project.git
